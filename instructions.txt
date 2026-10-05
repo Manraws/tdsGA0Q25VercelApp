@@ -1,0 +1,101 @@
+in bash:
+
+npm install -g vercel
+
+vercel login
+
+vercel dev
+
+
+
+Vercel should give you a local URL, normally something like:
+
+http://localhost:3000
+
+Test the endpoint:
+
+curl -X POST http://localhost:3000/ \
+  -H "Content-Type: application/json" \
+  -d '{"regions":["emea","apac"],"threshold_ms":180}'
+
+
+You should get an object containing emea and apac.
+
+
+Deploy to Vercel
+
+You have two easy choices.
+
+Option A — Vercel CLI
+
+From the project directory:
+
+vercel
+
+Answer the setup questions.
+
+For the production deployment:
+vercel --prod
+
+At the end, Vercel will give you a URL such as:
+
+https://vercel-latency-api-xxxxx.vercel.app
+
+Your POST endpoint is:
+
+https://vercel-latency-api-xxxxx.vercel.app/
+
+Option B — Vercel website
+
+Import the GitHub repository into Vercel.
+
+Vercel will automatically deploy the repository whenever you push changes to GitHub.
+
+8. Test the real deployed endpoint
+
+Suppose Vercel gives you:
+
+https://vercel-latency-api-xxxxx.vercel.app
+
+Run:
+
+curl -X POST \
+  https://vercel-latency-api-xxxxx.vercel.app/ \
+  -H "Content-Type: application/json" \
+  -d '{"regions":["emea","apac"],"threshold_ms":180}'
+
+The evaluator can then send exactly:
+
+{
+  "regions": ["emea", "apac"],
+  "threshold_ms": 180
+}
+
+and your endpoint will calculate the four requested metrics independently for each region.
+
+One important Vercel detail
+
+For this particular assignment, keep q-vercel-latency.json inside the deployed repository. The Python function reads it during startup. Don't put the file only on your laptop and expect the deployed function to see it.
+
+If you follow the structure above, the final URL you submit as the answer to “What is the POST endpoint URL?” is the Vercel production URL followed by /.
+ Run:
+
+curl -X POST \
+  https://vercel-latency-api-xxxxx.vercel.app/ \
+  -H "Content-Type: application/json" \
+  -d '{"regions":["emea","apac"],"threshold_ms":180}'
+
+The evaluator can then send exactly:{
+  "regions": ["emea", "apac"],
+  "threshold_ms": 180
+}
+
+and your endpoint will calculate the four requested metrics independently for each region.
+
+One important Vercel detail
+
+For this particular assignment, keep q-vercel-latency.json inside the deployed repository. The Python function reads it during startup. Don't put the file only on your laptop and expect the deployed function to see it.
+
+If you follow the structure above, the final URL you submit as the answer to “What is the POST endpoint URL?” is the Vercel production URL followed by /.
+
+
