@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
@@ -7,14 +7,20 @@ import os
 
 app = FastAPI()
 
-# CORS: allow every origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 
 DATA_FILE = os.path.join(
@@ -44,11 +50,15 @@ def percentile(values, p):
     if lower == upper:
         return values[lower]
 
-    return (
-        values[lower]
-        + (values[upper] - values[lower])
-        * (position - lower)
-    )
+    return values[lower] + (values[upper] - values[lower]) * (position - lower)
+
+
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Max-Age": "600",
+}
 
 
 @app.get("/")
@@ -56,38 +66,31 @@ def root():
     return {"status": "ok"}
 
 
+@app.options("/")
+@app.options("/api/latency")
+def preflight():
+    return Response(status_code=200, headers=CORS_HEADERS)
+
+
+@app.post("/")
 @app.post("/api/latency")
 def latency(request: RequestBody):
     result = {}
 
     for region in request.regions:
-        records = [
-            r for r in telemetry
-            if r["region"] == region
-        ]
+        records = [r for r in telemetry if r["region"] == region]
 
         if not records:
             continue
 
-        latencies = [
-            r["latency_ms"]
-            for r in records
-        ]
-
-        uptimes = [
-            r["uptime_pct"]
-            for r in records
-        ]
+        latencies = [r["latency_ms"] for r in records]
+        uptimes = [r["uptime_pct"] for r in records]
 
         result[region] = {
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": percentile(latencies, 0.95),
             "avg_uptime": sum(uptimes) / len(uptimes),
-            "breaches": sum(
-                1
-                for latency in latencies
-                if latency > request.threshold_ms
-            )
+            "breaches": sum(1 for l in latencies if l > request.threshold_ms),
         }
 
     return result
