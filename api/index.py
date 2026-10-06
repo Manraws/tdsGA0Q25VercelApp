@@ -87,5 +87,5 @@ def latency(request: RequestBody):
             )
         }
 
-    # return result
-    return {**result, "regions": result}
+    return result
+    # return {**result, "regions": result}
