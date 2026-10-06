@@ -7,17 +7,14 @@ import os
 
 app = FastAPI()
 
-# Allow POST requests from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load the telemetry data.
-# Put q-vercel-latency.json in the project root.
 DATA_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
     "q-vercel-latency.json"
@@ -32,14 +29,13 @@ class RequestBody(BaseModel):
     threshold_ms: float
 
 
-def percentile(values, percentile):
-    """Calculate percentile using linear interpolation."""
+def percentile(values, p):
     values = sorted(values)
 
     if len(values) == 1:
         return values[0]
 
-    position = (len(values) - 1) * percentile
+    position = (len(values) - 1) * p
     lower = math.floor(position)
     upper = math.ceil(position)
 
@@ -48,48 +44,40 @@ def percentile(values, percentile):
 
     return (
         values[lower]
-        + (values[upper] - values[lower]) * (position - lower)
+        + (values[upper] - values[lower])
+        * (position - lower)
     )
 
 
 @app.get("/")
 def root():
-    return {"message": "eShopCo latency API is running"}
+    return {"status": "ok"}
 
 
-@app.post("/")
-def calculate_metrics(request: RequestBody):
-    results = {}
+@app.post("/api/latency")
+def latency(request: RequestBody):
+    result = {}
 
     for region in request.regions:
         records = [
-            record
-            for record in telemetry
-            if record["region"] == region
+            r for r in telemetry
+            if r["region"] == region
         ]
 
         if not records:
             continue
 
-        latencies = [
-            record["latency_ms"]
-            for record in records
-        ]
+        latencies = [r["latency_ms"] for r in records]
+        uptimes = [r["uptime_pct"] for r in records]
 
-        uptimes = [
-            record["uptime_pct"]
-            for record in records
-        ]
-
-        results[region] = {
+        result[region] = {
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": percentile(latencies, 0.95),
             "avg_uptime": sum(uptimes) / len(uptimes),
             "breaches": sum(
-                1
+                latency > request.threshold_ms
                 for latency in latencies
-                if latency > request.threshold_ms
-            ),
+            )
         }
 
-    return results
+    return result
