@@ -108,4 +108,5 @@ def latency(request: RequestBody):
             "breaches": sum(1 for l in latencies if l > request.threshold_ms),
         }
 
-    return result
+    # return result
+    return {"regions": result}
