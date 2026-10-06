@@ -7,20 +7,14 @@ import os
 
 app = FastAPI()
 
+# CORS: allow every origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def add_cors_header(request, call_next):
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
 
 
 DATA_FILE = os.path.join(
@@ -50,7 +44,11 @@ def percentile(values, p):
     if lower == upper:
         return values[lower]
 
-    return values[lower] + (values[upper] - values[lower]) * (position - lower)
+    return (
+        values[lower]
+        + (values[upper] - values[lower])
+        * (position - lower)
+    )
 
 
 @app.get("/")
@@ -58,25 +56,38 @@ def root():
     return {"status": "ok"}
 
 
-@app.post("/")
 @app.post("/api/latency")
 def latency(request: RequestBody):
     result = {}
 
     for region in request.regions:
-        records = [r for r in telemetry if r["region"] == region]
+        records = [
+            r for r in telemetry
+            if r["region"] == region
+        ]
 
         if not records:
             continue
 
-        latencies = [r["latency_ms"] for r in records]
-        uptimes = [r["uptime_pct"] for r in records]
+        latencies = [
+            r["latency_ms"]
+            for r in records
+        ]
+
+        uptimes = [
+            r["uptime_pct"]
+            for r in records
+        ]
 
         result[region] = {
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": percentile(latencies, 0.95),
             "avg_uptime": sum(uptimes) / len(uptimes),
-            "breaches": sum(1 for l in latencies if l > request.threshold_ms),
+            "breaches": sum(
+                1
+                for latency in latencies
+                if latency > request.threshold_ms
+            )
         }
 
     return result
