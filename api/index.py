@@ -15,6 +15,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 DATA_FILE = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
     "q-vercel-latency.json"
