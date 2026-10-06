@@ -13,13 +13,8 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-    CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Expose-Headers": "Access-Control-Allow-Origin",
-}
 )
+
 
 @app.middleware("http")
 async def add_cors_header(request, call_next):
@@ -55,16 +50,13 @@ def percentile(values, p):
     if lower == upper:
         return values[lower]
 
-    return (
-        values[lower]
-        + (values[upper] - values[lower])
-        * (position - lower)
-    )
+    return values[lower] + (values[upper] - values[lower]) * (position - lower)
 
 
 @app.get("/")
 def root():
     return {"status": "ok"}
+
 
 @app.post("/")
 @app.post("/api/latency")
@@ -72,10 +64,7 @@ def latency(request: RequestBody):
     result = {}
 
     for region in request.regions:
-        records = [
-            r for r in telemetry
-            if r["region"] == region
-        ]
+        records = [r for r in telemetry if r["region"] == region]
 
         if not records:
             continue
@@ -87,11 +76,7 @@ def latency(request: RequestBody):
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": percentile(latencies, 0.95),
             "avg_uptime": sum(uptimes) / len(uptimes),
-            "breaches": sum(
-                latency > request.threshold_ms
-                for latency in latencies
-            )
+            "breaches": sum(1 for l in latencies if l > request.threshold_ms),
         }
 
     return result
-    # return {**result, "regions": result}
