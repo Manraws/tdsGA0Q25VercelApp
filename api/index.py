@@ -53,7 +53,7 @@ def percentile(values, p):
 def root():
     return {"status": "ok"}
 
-
+@app.post("/")
 @app.post("/api/latency")
 def latency(request: RequestBody):
     result = {}
